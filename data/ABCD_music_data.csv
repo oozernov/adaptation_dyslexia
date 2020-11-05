@@ -1,0 +1,64 @@
+ABCD ID,Subgroup,Age,Sex,music_y_n,activity,age_started,hours_day,days_week,total_years,tot_music,current_train,curr_hrs_week,public_perf,prof_music,age_stopped,video_music
+ABCD_1704,Dyslexic,26,F,Yes,flute,14,1,2,2,4,No,,,,16,Dance Dance Revolution
+ABCD_1711,Dyslexic,18,F,No,,,,,,0,,,,,,"Dance Dance Revolution, Wii"
+ABCD_1714,Dyslexic,23,M,No,,,,,,0,,,,,,
+ABCD_1718,Dyslexic,,,,,,,,,0,,,,,,
+ABCD_1722,Dyslexic,23,F,No,,,,,,0,,,,,,0
+ABCD_1727,Dyslexic,25,F,No,,,,,,0,,,,,,Dance Dance Revolution
+ABCD_1735,Dyslexic,31,M,No,,,,,,0,,,,,,
+ABCD_1740,Dyslexic,30,F,No,,,,,,0,,,,,,None
+ABCD_1745,Dyslexic,38,M,No,,,,,,0,,,,,,
+ABCD_1763,Dyslexic,38,M,No,,,,,,0,,,,,,
+ABCD_1766,Dyslexic,35,M,No,,,,,,0,,,,,,n/a
+ABCD_1767,Dyslexic,37,F,No,,,,,,0,,,,,,
+ABCD_1770,Dyslexic,37,F,No,,,,,,0,,,,,,Na
+ABCD_1771,Dyslexic,24,M,Yes,Singing,4,1.5,5,8,60,No,,,,22,
+ABCD_1772,Dyslexic,20,F,No,,,,,,0,,,,,,"Guitar hero, rock band"
+ABCD_1773,Dyslexic,21,M,Yes,Trumpet,9,6,3,9,162,No,,,,19,Guitar Hero
+ABCD_1774,Dyslexic,19,M,No,,,,,,0,,,,,,
+ABCD_1775,Dyslexic,35,F,No,,,,,,0,,,,,,n/a
+ABCD_1776,Dyslexic,28,M,No,,,,,,0,,,,,,n/a
+ABCD_1778,Dyslexic,18,F,No,,,,,,0,,,,,,None
+ABCD_1779,Dyslexic,20,F,Yes,singing,12,2,5,7,70,Yes,4,yes,no,,Rock Band
+ABCD_1780,Dyslexic,21,F,Yes,,4,2,1.5,15,45,Yes,3,No,No,,
+ABCD_1781,Dyslexic,31,F,No,,,,,,0,,,,,,n/a
+ABCD_1782,Dyslexic,34,M,No,,,,,,0,,,,,,
+ABCD_1784,Dyslexic,20,M,No,,,,,,0,,,,,,
+ABCD_1787,Dyslexic,18,F,No,,,,,,0,,,,,,
+ABCD_1790,Dyslexic,25,F,Yes,"Ballet, voice, and piano",7,3,5,10,150,No,,,,17,0
+ABCD_1791,Dyslexic,37,F,No,,,,,,0,,,,,,Dance Dance Revolution
+ABCD_1792,Dyslexic,22,F,No,,,,,,0,,,,,,Sing Star
+ABCD_1793,Dyslexic,20,F,No,,,,,,0,,,,,,None
+ABCD_1794,Dyslexic,19,F,Yes,Piano,11,,,7,0,No,,,,18,
+ABCD_1795,Dyslexic,36,F,No,,,,,,0,,,,,,
+ABCD_1796,Dyslexic,18,M,No,,,,,,0,,,,,,None
+ABCD_1702,Typical,21,F,Yes,Piano,5,2.5,7,7,122.5,No,,,,12,Just Dance 2
+ABCD_1703,Typical,20,F,Yes,Piano,10,2.5,6.5,7,113.75,No,,,,18,None
+ABCD_1705,Typical,22,F,No,,,,,,0,,,,,,
+ABCD_1709,Typical,20,F,No,,,,,,0,,,,,,
+ABCD_1708,Typical,23,F,No,,,,,,0,,,,,,
+ABCD_1710,Typical,19,F,No,,,,,,0,,,,,,none
+ABCD_1716,Typical,22,F,Yes,"Saxophone, Piano, Ballroom, Tap, Ballet, Jazz",,,,15,0,Yes,3.5,yes,no,,
+ABCD_1717,Typical,25,F,No,,,,,,0,,,,,,None
+ABCD_1720,Typical,28,M,No,,,,,,0,,,,,,
+ABCD_1721,Typical,19,M,No,,,,,,0,,,,,,RockBand 4
+ABCD_1724,Typical,24,F,Yes,Singing.,11,3,3,7,63,No,,,,18,
+ABCD_1725,Typical,25,M,No,,,,,,0,,,,,,N/A
+ABCD_1726,Typical,30,M,No,,,,,,0,,,,,,
+ABCD_1728,Typical,24,M,Yes,Drums/percussion,10,2,5,8,80,No,,,,18,None over the past year
+ABCD_1729,Typical,23,M,Yes,Trumpet,6th grade,2,4,4,32,No,,,,16,
+ABCD_1730,Typical,32,M,No,,,,,,0,,,,,,None
+ABCD_1732,Typical,21,F,Yes,Acting,14,3,5,3.5,52.5,No,,,,18,None
+ABCD_1734,Typical,41,F,No,,,,,,0,,,,,,
+ABCD_1736,Typical,31,M,No,,,,,,0,,,,,,Rock Band
+ABCD_1739,Typical,30,M,Yes,Senegalese Drumming,29,2,1.5,2,6,Yes,1.5,Yes.,No.,,
+ABCD_1742,Typical,20,M,Yes,Piano/Trumpet,10,4,7,10,280,Yes,1,No,No,,
+ABCD_1783,Typical,35,F,No,,,,,,0,,,,,,NA
+ABCD_1785,Typical,35,F,Yes,Singing,10,1.5,4.5,15,101.25,Yes,1.5,no,no (I wish!),,Used to play DDR a lot (10-15 years ago)
+ABCD_1786,Typical,36,F,No,,,,,,0,,,,,,Rock Band
+ABCD_1788,Typical,34,M,No,,,,,,0,,,,,,None
+ABCD_1789,Typical,,,,,,,,,0,,,,,,
+ABCD_1797,Typical,19,F,No,,,,,,0,,,,,,
+ABCD_1798,Typical,25,F,No,,,,,,0,,,,,,
+ABCD_1799,Typical,25,M,,,,,,,0,,15,,,,Guitar Hero
+ABCD_1706,Typical,31,M,Yes,"Piano, Guitar, Voice",5,2,7,26,364,Yes,15,Yes,Yes,,None

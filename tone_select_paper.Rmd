@@ -1,0 +1,531 @@
+---
+title: "select_tone_paper"
+author: "Ola Ozernov-Palchik"
+date: "11/1/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Adult Analysis
+
+## Load packages and organize data 
+
+```{r, include=FALSE, echo=FALSE}
+Packages <- c("dplyr", "readr", "magrittr", "tidyr", "ggplot2", "lme4", "lmerTest",
+              "emmeans", "sjstats","dabestr","gridExtra",'knitr','psych',
+              'lmPerm',"lavaan",'MASS','tidyverse','psych','mice')
+lapply(Packages, library, character.only = TRUE)
+
+dir<-dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd("dir")
+
+d=read.csv("ABCD_data072320.csv")
+groups=read.csv("abcd_group.csv")
+snr=read.csv("SNR.csv")
+music=read.csv("~/Dropbox (MIT)/ABCD_Analysis/ABCD_music_data.csv")
+tone_sa=read.csv("~/Dropbox (MIT)/Com_Dys_2016_data/final_for_sharing/final_code_JT/ind_tone_selct_102020.csv")
+
+
+music$music_y_n<-ifelse(music$music_y_n == 'Yes',1,0) 
+music$music_y_n<-as.factor(music$music_y_n)
+
+names(music)[names(music)=="ABCD.ID"] <- "PartID"
+names(groups)[names(groups)=="ID"] <- "PartID"
+names(d)[names(d)=="abcd_id"] <- "PartID"
+d$PA<-(rowMeans(d[c('ctopp_elision_ss','ctopp_blending_ss','ctopp_nonword_ss')], na.rm=TRUE))
+d$WID<-(rowMeans(d[c('wrmt_id_ss','wrmt_wa_ss','towre_pde_ss','towre_sw_ss')], na.rm=TRUE))
+
+d=merge(d,groups,
+        by='PartID')
+d=merge(d,music,'PartID',all=TRUE)
+d=merge(d,tone_sa,'PartID',all=FALSE)
+d=merge(d,snr,'PartID',all=FALSE)
+
+names(d)[names(d)=="m_fd"] <- "tone_thresh"
+names(d)[names(d)=="b"] <- "select_slopeb"
+names(d)[names(d)=="d"] <- "select_sloped"
+names(d)[names(d)=="mean_diff"] <- "adaptor_diff"
+
+d2<-d %>%
+  dplyr::group_by(PartID) %>%
+  dplyr::mutate(m_slope = (select_slopeb+select_sloped)/2) #mean select adapt slope
+  #left_join(d, by = "PartID") 
+```
+```{r}
+hist(d$adaptor_diff)
+```
+
+## Music Analysis 
+```{r, echo=FALSE,include=FALSE}
+
+d_m<-d %>%
+  filter(music_y_n=='1')
+d_group<-d2%>%dplyr::filter(Subgroup=="DD"|Subgroup=="TYP")
+
+t.test(d_group$tot_music~d_group$Subgroup.x)
+tbl = table(d_group$music_y_n,d_group$Subgroup.x) 
+tbl     
+chisq.test(tbl) 
+anova(lm(tone_thresh~music_y_n+Subgroup.x, data=d_group)) #group differences sig after PA and SNR partialed out
+anova(lm(m_slope~music_y_n+Subgroup.x, data=d_group)) #group differences sig after PA and SNR partialed out
+anova(lm(diff_8~music_y_n+Subgroup.x, data=d_group)) #group differences sig after PA and SNR partialed out
+anova(lm(ntd~music_y_n+Subgroup.x, data=d_group)) #group differences sig after PA and SNR partialed out
+summary(lm(ctopp_blending_ss~select_sloped,data=d))
+
+```
+### Adult: Correlations
+```{r,echo=FALSE}
+d_a3<-d2%>%ungroup() %>% dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd)
+resa <- cor(na.omit(d_a3,method = "pearson"))
+d_a3<-na.omit(d_a3)
+#create a table with r and p
+source("corstars_function.R")
+corstars(d_a3,method="pearson")#you need to run the function first
+```
+
+###Adult: Correlations by group-TYP
+```{r,echo=FALSE}
+dd<-d2%>%filter(Subgroup.x=='DD')
+dd<-na.omit(dd%>%ungroup() %>% dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd))
+typ<-d2%>%filter(Subgroup.x=='TYP')
+typ<-na.omit(typ%>%ungroup() %>% dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd))
+corstars(typ,method="pearson")#you need to run the function first
+```
+
+###Adult: Correlations by group-DYS
+```{r,echo=FALSE}
+corstars(dd,method="pearson")#you need to run the function first
+```
+
+### Adult: Mediation Analysis
+```{r,echo=FALSE}
+#check assumptions
+d2 %>% ungroup %>% 
+  dplyr::select(tone_thresh, m_slope, PA,adaptor_diff) %>% 
+  pairs.panels()
+#d2<-d2%>%filter(tone_thresh<200) #remove an outlier
+
+#check variance
+d3<-d2%>%ungroup %>% dplyr::select(tone_thresh, m_slope,ntd, PA,adaptor_diff,Subgroup.x)
+varTable(d3)
+
+#http://lavaan.ugent.be/tutorial/mediation.html
+#https://nmmichalak.github.io/nicholas_michalak/blog_entries/2018/nrg01/nrg01.html
+```
+
+#### Model 1 JND
+```{r,echo=FALSE}
+###H1: #Y=PA, X=tone threshold, M=slectAdapt slope
+
+model_h1<-'#direct effect
+  PA~c*tone_thresh
+#mediator
+  m_slope~a*tone_thresh
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h1<-lavaan::sem(model_h1, data=d3,bootstrap=10000)
+summary(fit_h1,fit.measures=T, rsq=T)
+
+#created bootsrapped confidence intervals
+boot.fit_h1<-lavaan::parameterEstimates(fit_h1, boot.ci.type = "bca.simple",level = 0.95, 
+                             ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h1
+```
+
+#### Model 2 NTD
+```{r,echo=FALSE}
+### H2: Y=PA, X=ntd, M=select_adapt
+
+model_h2<-'#direct effect
+  PA~c*ntd
+#mediator
+  m_slope~a*ntd
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h2<-lavaan::sem(model_h2, data=d3,bootstrap=10000)
+summary(fit_h2,fit.measures=T, rsq=T)
+boot.fit_h2<-lavaan::parameterEstimates(fit_h2, boot.ci.type = "bca.simple",level = 0.95,
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h2
+```
+
+#### Model 3 Adaptation
+
+```{r,echo=FALSE}
+### H3: Y=PA, X=adaptor_diff, M=select_adapt
+
+model_h3<-'#direct effect
+  PA~c*adaptor_diff
+#mediator
+  m_slope~a*adaptor_diff
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+#run mediation analysis with bootstrapping
+fit_h3<-lavaan::sem(model_h3, data=d3,bootstrap=10000)
+summary(fit_h3,fit.measures=T, rsq=T)
+boot.fit_h3<-lavaan::parameterEstimates(fit_h3, boot.ci.type = "bca.simple",level = 0.95, 
+                                      ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h3
+```
+
+## Adult Dyslexia Only
+
+#### Adult Dys: Model 1 JND
+```{r,echo=FALSE}
+dd<-d3%>%filter(Subgroup.x=='DD')
+
+###H1: #Y=PA, X=tone threshold, M=slectAdapt slope
+
+model_h1<-'#direct effect
+  PA~c*tone_thresh
+#mediator
+  m_slope~a*tone_thresh
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h1<-lavaan::sem(model_h1, data=dd,bootstrap=10000)
+summary(fit_h1,fit.measures=T, rsq=T)
+
+#created bootsrapped confidence intervals
+boot.fit_h1<-lavaan::parameterEstimates(fit_h1, boot.ci.type = "bca.simple",level = 0.95, 
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h1
+```
+#### Adult Dys: Model 2 NTD
+```{r,echo=FALSE}
+
+
+### H2: Y=PA, X=ntd, M=select_adapt
+
+model_h2<-'#direct effect
+  PA~c*ntd
+#mediator
+  m_slope~a*ntd
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h2<-lavaan::sem(model_h2, data=dd,bootstrap=10000)
+summary(fit_h2,fit.measures=T, rsq=T)
+boot.fit_h2<-lavaan::parameterEstimates(fit_h2, boot.ci.type = "bca.simple",level = 0.95,
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h2
+```
+#### Adult Dys: Model 3 Adaptation
+
+```{r,echo=FALSE}
+
+### H3: Y=PA, X=adaptor_diff, M=select_adapt
+
+model_h3<-'#direct effect
+  PA~c*adaptor_diff
+#mediator
+  m_slope~a*adaptor_diff
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+#run mediation analysis with bootstrapping
+fit_h3<-lavaan::sem(model_h3, data=dd,bootstrap=10000)
+summary(fit_h3,fit.measures=T, rsq=T)
+boot.fit_h3<-lavaan::parameterEstimates(fit_h3, boot.ci.type = "bca.simple",level = 0.95, 
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h3
+```
+
+# Child Analysis
+
+## Child: Organize Data
+```{r, echo=FALSE, include=FALSE}
+
+d_c<-read.csv("~/Dropbox (MIT)/Com_Dys_2016_data/final_for_sharing/final_code_JT/ind_tone_select_child_103020.csv")
+Missing_patterns <-md.pattern(d_c)
+Missing_patterns
+beh_c<-read.csv("~/Dropbox (MIT)/Com_Dys_2016_data/adult_analysis/dys_comp_child.csv")
+set.seed(182)
+init = mice(beh_c, maxit=0)
+meth = init$method
+predM = init$predictorMatrix
+predM[, c("PartID")]=0
+imputed = mice(beh_c, method=meth, predictorMatrix=predM, m=50)
+imputed <- complete(imputed)
+#apply(imputed,2,pMiss)
+beh_c2<-imputed
+str(beh_c2)
+Missing_patterns <-md.pattern(beh_c2)
+Missing_patterns
+
+d_c2<-merge(d_c,beh_c2,"PartID")
+Missing_patterns <-md.pattern(d_c2)
+Missing_patterns
+
+names(d_c2)[names(d_c2)=="m_fd"] <- "tone_thresh"
+names(d_c2)[names(d_c2)=="b"] <- "select_slopeb"
+names(d_c2)[names(d_c2)=="d"] <- "select_sloped"
+names(d_c2)[names(d_c2)=="mean_diff"]<-"adaptor_diff"
+
+d_c2$PA<-(rowMeans(d_c2[c('ctel','ctbw')]))
+#d_c$WID<-(rowMeans(d_c2[c('WID','WWA','twse','tpde')], na.rm=TRUE))
+hist(d_c2$adaptor_diff)
+
+d_c2=d_c2%>% 
+  dplyr::group_by(PartID)%>% 
+  dplyr::summarize(m_slope = ((select_slopeb+select_sloped)/2))%>% #mean select adapt slope
+  left_join(d_c2, by = "PartID") 
+
+```
+
+## Child Correlations
+```{r,echo=FALSE}
+d_c3<-d_c2%>%ungroup() %>% dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd)
+d_c3<-na.omit(d_c3)
+
+#you need to run the function first
+source("corstars_function.R")
+corstars(d_c3, method="pearson")
+```
+
+###Child Correlation by Group
+
+#### Child Dys
+
+```{r,echo=FALSE}
+### by DYS group ###
+
+d_dd_c<-d_c2%>%filter(group=='Dys')
+d_dd_c$PartID<-NULL
+
+d_dd_c2<-d_dd_c%>%dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd)
+str(d_dd_c2)
+resa <- cor(na.omit(d_dd_c2,method = "pearson"))
+d_dd_c<-na.omit(d_dd_c2)
+#create a table with r and p
+corstars(d_dd_c2,method="pearson")#you need to run the function first
+
+```
+#### Plot NTD and PA in Child
+```{r,echo=FALSE}
+#what does the PA and NTD correlation look like
+ggplot(d_dd_c2, aes(x = ntd, y = PA)) +
+  stat_smooth (
+    method = "glm",
+    formula = y ~ x,
+    # colour = "black",
+    size = 1
+  ) +
+  geom_point(aes (size = 5)) +
+  scale_shape_manual(values = c(1, 17)) +
+  labs(x = "NTD", y = "PA") +
+  theme(
+    axis.title = element_text(family = "Trebuchet MS", size = 20),
+    legend.position ="none",
+    legend.text = element_blank(),
+    legend.title = element_blank(),
+    panel.background = element_rect(fill = "transparent", colour = NA), 
+    plot.background = element_rect(fill = "transparent", colour = NA),
+    axis.line = element_line(colour = "black"),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 15))
+
+
+#try without outlier
+#test<-d_dd_c2%>%filter(d_dd_c$PA>6)
+#corstars(test,method="pearson")#you need to run the function first
+```
+
+#### Child Typ
+```{r,echo=FALSE}
+
+### by TYP group ###
+d_t_c<-d_c2%>%filter(group=='Typ')
+d_t_c<-d_t_c%>%ungroup() %>% dplyr::select(adaptor_diff,m_slope,PA,tone_thresh,ntd)
+resct <- cor(na.omit(d_t_c,method = "spearman"))
+d_t_c2<-na.omit(d_t_c)
+#create a table with r and p
+corstars(d_t_c2,method="pearson")#you need to run the function first
+```
+
+## Child: Mediation Analysis
+```{r,echo=FALSE}
+#check assumptions
+d_c4<-d_c2 %>% ungroup %>% 
+  dplyr::select(tone_thresh, m_slope, PA,adaptor_diff,group) %>% 
+  pairs.panels()
+#d_c4<-d_c3%>%filter(tone_thresh<300) #remove an outlier
+```
+
+#### Child: Model 1 JND
+```{r,echo=FALSE}
+
+###H1: #Y=PA, X=tone threshold, M=slectAdapt slope
+d_c_1=d_c2 %>% ungroup %>% 
+  dplyr::select(tone_thresh, m_slope, PA)
+d_c_1<-na.omit(d_c_1)
+
+model_h1<-'#direct effect
+  PA~c*tone_thresh
+#mediator
+  m_slope~a*tone_thresh
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_c_h1<-lavaan::sem(model_h1, data=d_c_1,bootstrap=10000)
+summary(fit_c_h1,fit.measures=T, rsq=T)
+
+#created bootsrapped confidence intervals
+boot.fit_h1<-lavaan::parameterEstimates(fit_c_h1, boot.ci.type = "bca.simple",level = 0.95, 
+                                     ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h1
+```
+#### Child: Model 2 NTD
+```{r,echo=FALSE}
+### H2: Y=PA, X=ntd, M=select_adapt
+d_c_2=d_c2 %>% ungroup %>% 
+  dplyr::select(m_slope, ntd, PA)
+d_c_2<-na.omit(d_c_2)
+
+model_h2<-'#direct effect
+  PA~c*ntd
+#mediator
+  m_slope~a*ntd
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h2<-lavaan::sem(model_h2, data=d_c_2,bootstrap=1000)
+summary(fit_h2,fit.measures=T, rsq=T)
+boot.fit_h2<-lavaan::parameterEstimates(fit_h2, boot.ci.type = "bca.simple",level = 0.95,
+                                     ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h2
+```
+#### Child: Model 3 Adaptation
+```{r,echo=FALSE}
+###H3: #Y=PA, X=adaptor_diff, M=slectAdapt slope
+d_c4=d_c2 %>% ungroup %>% 
+  dplyr::select(adaptor_diff, m_slope, PA)
+d_c4<-na.omit(d_c4)
+model_c_h3<-'#direct effect
+  PA~c*adaptor_diff
+#mediator
+  m_slope~a*adaptor_diff
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+fit_c_h3<-lavaan::sem(model_c_h3, data=d_c4,bootstrap=1000)
+summary(fit_c_h3,fit.measures=T, rsq=T)
+boot.fit_c_h3<-lavaan::parameterEstimates(fit_c_h3, boot.ci.type = "bca.simple",level = 0.95, 
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_c_h3
+```
+
+## Child: Dyslexia only
+
+#### Child DYS: Model 1 JND
+```{r,echo=FALSE}
+dd_c<-d_c2%>%filter(group=='Dys')
+dd_c_1=dd_c %>% ungroup %>% 
+  dplyr::select(tone_thresh, m_slope, PA)
+dd_c_1<-na.omit(dd_c_1)
+
+###H1: #Y=PA, X=tone threshold, M=slectAdapt slope
+
+model_h1<-'#direct effect
+  PA~c*tone_thresh
+#mediator
+  m_slope~a*tone_thresh
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_c_h1<-lavaan::sem(model_h1, data=dd_c_1,bootstrap=10000)
+summary(fit_c_h1,fit.measures=T, rsq=T)
+
+#created bootsrapped confidence intervals
+boot.fit_h1<-lavaan::parameterEstimates(fit_c_h1, boot.ci.type = "bca.simple",level = 0.95, 
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h1
+```
+
+#### Child DYS: Model 2 NTD
+```{r,echo=FALSE}
+### H2: Y=PA, X=ntd, M=m_slope
+dd_c_2=dd_c %>% ungroup %>% 
+  dplyr::select(ntd, m_slope, PA)
+dd_c_2<-na.omit(dd_c_2)
+model_h2<-'#direct effect
+  PA~c*ntd
+#mediator
+  m_slope~a*ntd
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+#run mediation analysis with bootstrapping
+fit_h2<-lavaan::sem(model_h2, data=dd_c_2,bootstrap=10000)
+summary(fit_h2,fit.measures=T, rsq=T)
+boot.fit_h2<-lavaan::parameterEstimates(fit_h2, boot.ci.type = "bca.simple",level = 0.95,
+                                        ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_h2
+```
+
+#### Child DYS: Model 3 Adaptation
+```{r,echo=FALSE}
+
+###H3: #Y=PA, X=adaptor_diff, M=slectAdapt slope
+
+model_c_h3<-'#direct effect
+  PA~c*adaptor_diff
+#mediator
+  m_slope~a*adaptor_diff
+  PA~b*m_slope
+# indirect effect (a*b)
+  ab := a*b
+# total effect
+  total := c + (a*b)'
+
+fit_c_h3<-lavaan::sem(model_c_h3, data=dd_c,bootstrap=1000)
+summary(fit_c_h3,fit.measures=T, rsq=T)
+boot.fit_c_h3<-lavaan::parameterEstimates(fit_c_h3, boot.ci.type = "bca.simple",level = 0.95, 
+                                          ci=TRUE,pval=TRUE,standardized = FALSE)
+boot.fit_c_h3
+```
+
